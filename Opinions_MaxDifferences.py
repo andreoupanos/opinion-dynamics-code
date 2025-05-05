@@ -201,7 +201,7 @@ def MFA_accuracy(n, c, d, T, B, kappa, internal, media_list, theta_n_list, num_s
                 R = 2*np.random.rand(n)-1 # generate initial opinions independently of everything else
                 W = d*media_signals(n, T, media, Q)
                 
-                # keep the trajectory of the mean-field process
+                # keep the trajectory of the mean-field process 
                 MFA_trajectory = MFA_process(n, T, c, d, W, R, media, B, kappa)
                 
                 # initialize the trajectory of the opinion process
