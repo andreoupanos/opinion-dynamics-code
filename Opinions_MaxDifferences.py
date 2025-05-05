@@ -42,11 +42,6 @@ def B_weights(n):
     
     B = np.zeros((n, n))
     
-    #B[:n1, :n1] = np.random.normal(5, 0.1, size=(n1, n1)) # community 1 to community 1
-    #B[:n1, n1:] = np.random.normal(2.5, 0.1, size=(n1, n2)) # community 1 to community 2
-    #B[n1:, :n1] = np.random.normal(5, 0.1, size=(n2, n1)) # community 2 to community 1
-    #B[n1:, n1:] = np.random.normal(2.5, 0.1, size=(n2, n2)) # community 2 to community 2
-    
     B[:n1, :n1] = 4  # community 1 to community 1
     B[:n1, n1:] = 1  # community 1 to community 2
     B[n1:, :n1] = 1  # community 2 to community 1
@@ -97,7 +92,8 @@ def media_signals(n, T, media, Q):
     # n is the number of nodes (people), T is the number of iterations 
     # media is the type of media signals people receive
     
-    # We will generate all the media at once (since they are independent) and then call them in the main function
+    # We define several types of media signals, even though in 
+    # the main application we will only use three of them
     Z = np.zeros((n, T)) # initialize the media matrix
     
     if media == 'uniform':
@@ -145,7 +141,7 @@ def precompute_M_powers(n, B, kappa, T):
     M[1, 0] = (B[n-1,0]*kappa[0][1])/(B[n-1,0]*kappa[0][1]+B[n-1,n-1]*kappa[1][1])
     M[1, 1] = (B[n-1,n-1]*kappa[1][1])/(B[n-1,0]*kappa[0][1]+B[n-1,n-1]*kappa[1][1])
     
-    # Compute the powers up to M^T
+    # Compute the powers up to M^{T-1}
     M_powers = [np.linalg.matrix_power(M, s) for s in range(1, T)]
     
     return M_powers
@@ -199,7 +195,7 @@ def MFA_accuracy(n, c, d, T, B, kappa, internal, media_list, theta_n_list, num_s
                 C = C_weights(n, c, d, A) # generate weights C
                 Q = internal_opinions(n, internal) # generate internal opinions
                 R = 2*np.random.rand(n)-1 # generate initial opinions independently of everything else
-                W = d*media_signals(n, T, media, Q)
+                W = d*media_signals(n, T, media, Q) # generate media signals
                 
                 # keep the trajectory of the mean-field process 
                 MFA_trajectory = MFA_process(n, T, c, d, W, R, media, B, kappa)
@@ -211,7 +207,7 @@ def MFA_accuracy(n, c, d, T, B, kappa, internal, media_list, theta_n_list, num_s
                 D = np.sum(A, axis=0) # in-degrees 
     
                 for i in range(n):
-                    if D[i] == 0: # if no incoming neighbors
+                    if D[i] == 0: # if no incoming neighbors, update using the internal opinion
                         W[i, :] += c*Q[i]
                 
                 # iterate the opinion recursion and keep all the intermediate values 
@@ -220,12 +216,12 @@ def MFA_accuracy(n, c, d, T, B, kappa, internal, media_list, theta_n_list, num_s
                     R_trajectory[:, t] = R
                 
                 # calculate the maximum absolute difference of the two processes
+                # across nodes and time steps
                 max_diff = np.max(np.abs(R_trajectory - MFA_trajectory))
                 diffs.append(max_diff) # add the difference to the diffs list
                 
             average_diff = np.mean(diffs) # compute the average difference based on 10 simulations
-            std_diff = np.std(diffs) # compute the standard deviation of the differences based on 10 simulations
-            results.append((theta_n, media, average_diff, std_diff))
+            results.append((theta_n, media, average_diff))
             
     return results 
 
