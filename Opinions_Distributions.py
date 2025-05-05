@@ -92,17 +92,10 @@ def internal_opinions(n, l, internal):
 # media signals
 def media_signals(n, l, T, media, Q):
     
-    # Q = internal_opinions(n, l, internal)
-    
     Z = np.zeros((n, l, T)) # initialize the media tensor
     
     if media == 'uniform':
         Z = -1 + 2*np.random.rand(n, l, T)
-        
-    elif media == 'biased internal':
-        for t in range(T):
-            Z[:n//2, :, t] = np.random.normal(loc=-np.abs(Q[:n//2, :]), scale=0.1, size=(n//2, l))
-            Z[n//2:, :, t] = np.random.normal(loc=np.abs(Q[n//2:, :]), scale=0.1, size=(n//2, l))
         
     elif media == 'both': # polarizing on 1st topic and uniform across the rest of topics
         for t in range(T):
@@ -110,20 +103,13 @@ def media_signals(n, l, T, media, Q):
             Z[n//2:, 0, t] = np.random.normal(loc=np.abs(Q[n//2:, 0]), scale=0.1, size=(n//2))
             Z[:, 1:, t] = -1 + 2*np.random.rand(n, l-1)
             
-    elif media == 'both_d': # polarizing on 1st topic and uniform across the rest of topics
-        for t in range(T):
-            Z[:n//2, 0, t] = np.random.normal(loc=-1/2, scale=0.1, size=(n//2))
-            Z[n//2:, 0, t] = np.random.normal(loc=1/2, scale=0.1, size=(n//2))
-            Z[:, 1:, t] = -1 + 2*np.random.rand(n, l-1)
-            
     Z = np.clip(Z, -1, 1)
             
     return Z
 
-# external influence
+# external influence: W_i^{(k)}=dZ_i^{(k)}+cq_i1(d_i^-=0)
 def external_influence(n, l, T, c, d, A, media, Q):
     
-    # Q = internal_opinions(n, l, internal)
     Z = media_signals(n, l, T, media, Q)
     W = np.zeros((n, l, T))
     D = np.sum(A, axis=0)
@@ -140,13 +126,13 @@ def external_influence(n, l, T, c, d, A, media, Q):
 def precompute_M_powers(n, B, kappa, T):
     
     M = np.zeros((2, 2))
-    # Compute the matrix M
+    # Compute the matrix M showing up in Section 3 of the paper
     M[0, 0] = (B[0,0]*kappa[0][0])/(B[0,0]*kappa[0][0]+B[0,n-1]*kappa[1][0])
     M[0, 1] = (B[0,n-1]*kappa[1][0])/(B[0,0]*kappa[0][0]+B[0,n-1]*kappa[1][0])
     M[1, 0] = (B[n-1,0]*kappa[0][1])/(B[n-1,0]*kappa[0][1]+B[n-1,n-1]*kappa[1][1])
     M[1, 1] = (B[n-1,n-1]*kappa[1][1])/(B[n-1,0]*kappa[0][1]+B[n-1,n-1]*kappa[1][1])
     
-    # Compute the powers up to M^{T-1}
+    # Compute the powers up to M^{T-1} 
     M_powers = [np.linalg.matrix_power(M, s) for s in range(1, T)]
     
     return M_powers
@@ -160,7 +146,7 @@ def MFA_process(n, l, T, c, d, W, R0, media, B, kappa):
     M_powers = precompute_M_powers(n, B, kappa, T)
     
     bar_W = np.zeros((2, l))
-    if media == 'both' or 'both_d': 
+    if media == 'both': 
         bar_W[0, 0] = -d/2  
         bar_W[1, 0] = d/2   
     
@@ -197,8 +183,8 @@ np.random.seed(112)
 n = 2000 # number of individuals
 T = 20 # number of iterations 
 n1 = n2 = n//2 # number of nodes in each community
-l = 2 # number of topics 
-kappa = [[10, 1], [1, 2]]
+l = 2 # number of topics  
+kappa = [[10, 1], [1, 2]] # SBM kernel
 c = 0.6
 d = 0.2
 B = B_weights(n)
@@ -224,6 +210,7 @@ mfa = MFA_trajectory[:, :, T] # independent of density parameter
 theta_n = n/10
 
 # initialize the n by l matrix that will end up containing the opinions at time T
+# (essentially, this is only relevant in the sparse regime)
 original_dense = np.zeros((n, l))
 
 A = dSBM(n, kappa, theta_n)
@@ -244,8 +231,6 @@ for i in range(n):
 # Trajectory of original opinion process (dense)
 R_trajectory = np.zeros((n, l, T+1))
 R_trajectory[:, :, 0] = R_dense
-
-#W = external_influence(n, l, T, c, d, A, internal, media)
 
 for t in range(1, T+1):
     R_dense = np.dot(C, R_dense) + W[:, :, t-1]
@@ -373,6 +358,9 @@ plt.show()
 ### Scatterplots of initial vs expressed opinions
 ### ---------------------------------------------
 
+# This part of the code illustrates how our model works 
+# and does not include the mean-field process
+
 n = 2000 # number of individuals
 n1 = n2 = n//2 # number of nodes in each community
 
@@ -389,7 +377,7 @@ theta_n = np.log(n)
 internal = 'uniform'
 media = 'both'
     
-# Generate the graph, weights, internal opinions, and external influences
+# generate the graph, weights, internal opinions, and external influences
 A = dSBM(n, kappa, theta_n)
 C = C_weights(n, c, d, A)
 Q = internal_opinions(n, l, internal)
@@ -397,17 +385,17 @@ R = 2*np.random.rand(n, l)-1
 R_init = np.copy(R)
 W = external_influence(n, l, T, c, d, A, media, Q)
 
-# Initialize the trajectory storage 
+# initialize the trajectory  
 R_trajectory = np.zeros((n, l, T+1))
 R_trajectory[:, :, 0] = R
 
-# Simulate the original opinion process
+# simulate the opinion process
 for t in range(1, T+1):
     R = np.dot(C, R) + W[:, :, t-1]
     R_trajectory[:, :, t] = R
     
     
-# Plot initial vs. expressed opinions
+# plot initial vs. expressed opinions
 sns.set_theme(style="darkgrid")
 
 initial_com1_opinions = R_init[:int(n1), :] # initial opinions of community 1
@@ -417,7 +405,7 @@ expressed_com2_opinions = R[int(n1):int(n1+n2), :] # expressed (stationary) opin
 
 fig, axes = plt.subplots(1, 2, figsize=(20, 8))
 
-# scatterplot for initial opinions 
+# scatterplot of initial opinions 
 axes[0].scatter(initial_com1_opinions[:, 0], initial_com1_opinions[:, 1], color='blue', label='Community 1')
 axes[0].scatter(initial_com2_opinions[:, 0], initial_com2_opinions[:, 1], color='red', label='Community 2')
 axes[0].set_xlabel('Opinions on topic 1')
@@ -426,7 +414,7 @@ axes[0].set_title('Initial Opinions')
 axes[0].legend()
 axes[0].grid(True)
 
-# Scatterplot for expressed opinions
+# scatterplot of expressed opinions
 axes[1].scatter(expressed_com1_opinions[:, 0], expressed_com1_opinions[:, 1], color='blue', label='Community 1')
 axes[1].scatter(expressed_com2_opinions[:, 0], expressed_com2_opinions[:, 1], color='red', label='Community 2')
 axes[1].set_xlabel('Opinions on topic 1')
