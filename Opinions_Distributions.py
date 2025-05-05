@@ -397,7 +397,7 @@ R = 2*np.random.rand(n, l)-1
 R_init = np.copy(R)
 W = external_influence(n, l, T, c, d, A, media, Q)
 
-# Initialize the trajectory storage
+# Initialize the trajectory storage 
 R_trajectory = np.zeros((n, l, T+1))
 R_trajectory[:, :, 0] = R
 
