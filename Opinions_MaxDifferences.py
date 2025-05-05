@@ -136,22 +136,6 @@ def media_signals(n, T, media, Q):
         
     return Z
 
-# external influence 
-def external_influence(n, T, c, d, A, media, Q):
-    
-    # Q = internal_opinions(n, internal) # simulate internal opinions
-    Z = media_signals(n, T, media, Q) # simulate media signals
-    W = np.zeros((n, T)) # initialize matrix of external influences
-    D = np.sum(A, axis=0) # in-degrees
-    
-    for i in range(n):
-        if D[i] == 0: # if no incoming neighbors
-            W[i, :] = c*Q[i]+d*Z[i, :] 
-        else:
-            W[i, :] = d*Z[i, :] # otherwise, scale the media signals
-            
-    return W
-
 def precompute_M_powers(n, B, kappa, T):
     
     M = np.zeros((2, 2))
@@ -216,7 +200,6 @@ def MFA_accuracy(n, c, d, T, B, kappa, internal, media_list, theta_n_list, num_s
                 Q = internal_opinions(n, internal) # generate internal opinions
                 R = 2*np.random.rand(n)-1 # generate initial opinions independently of everything else
                 W = d*media_signals(n, T, media, Q)
-                #W = external_influence(n, T, c, d, A, media, Q) # generate media signals
                 
                 # keep the trajectory of the mean-field process
                 MFA_trajectory = MFA_process(n, T, c, d, W, R, media, B, kappa)
