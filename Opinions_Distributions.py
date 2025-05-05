@@ -436,5 +436,4 @@ axes[1].legend()
 axes[1].grid(True)
 
 plt.tight_layout()
-#plt.savefig('InternalvsExpressed_CorrelatedMedia_AbsoluteInternals')
 plt.show()
