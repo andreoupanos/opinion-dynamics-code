@@ -208,7 +208,7 @@ def MFA_accuracy(n, c, d, T, B, kappa, internal, media_list, theta_n_list, num_s
                 R_trajectory = np.zeros((n, T+1))
                 R_trajectory[:, 0] = R
                 
-                D = np.sum(A, axis=0) # in-degrees
+                D = np.sum(A, axis=0) # in-degrees 
     
                 for i in range(n):
                     if D[i] == 0: # if no incoming neighbors
